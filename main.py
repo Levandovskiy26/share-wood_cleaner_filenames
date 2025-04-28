@@ -19,6 +19,12 @@ class DirectoryCleaner(QWidget):
         self.path_input.setPlaceholderText('Введите путь к папке...')
         layout.addWidget(self.path_input)
 
+        # Поле для ввода префиксов, которые нужно удалять
+        self.prefix_input = QLineEdit(self)
+        self.prefix_input.setPlaceholderText('Введите префиксы для удаления (через запятую)...')
+        self.prefix_input.setText('[SW.BAND]')  # Установка начального значения
+        layout.addWidget(self.prefix_input)
+
         # Окно для вывода структуры папки
         self.output_area = QTextEdit(self)
         self.output_area.setReadOnly(True)
@@ -42,6 +48,8 @@ class DirectoryCleaner(QWidget):
 
     def rename_and_print_directory_structure(self, path, indent=0):
         items = os.listdir(path)
+        prefixes_to_remove = [prefix.strip() for prefix in self.prefix_input.text().split(',')]
+
         for item in items:
             full_path = os.path.join(path, item)
 
@@ -54,12 +62,14 @@ class DirectoryCleaner(QWidget):
                 os.remove(full_path)
                 continue
 
-            # Переименование файлов, начинающихся на '[SW.BAND]'
-            if item.startswith('[SW.BAND]'):
-                new_name = item.replace('[SW.BAND]', '').strip()
-                new_full_path = os.path.join(path, new_name)
-                os.rename(full_path, new_full_path)
-                item = new_name
+            # Переименование файлов, начинающихся на указанные префиксы
+            for prefix in prefixes_to_remove:
+                if item.startswith(prefix):
+                    new_name = item.replace(prefix, '').strip()
+                    new_full_path = os.path.join(path, new_name)
+                    os.rename(full_path, new_full_path)
+                    item = new_name
+                    break  # Выход из цикла, если префикс был найден и удалён
 
             # Вывод структуры папки
             self.output_area.append(' ' * indent + f"📁 {item}")
