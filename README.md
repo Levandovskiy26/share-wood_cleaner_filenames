@@ -1,2 +1,2 @@
-# share-wood_cleaner_filenames
+# sharewood_cleaner_filenames
 Удаляет лишние файлы и чистит названия файлов, удаляя лишнее начало в названии файла
