@@ -1,53 +1,77 @@
+import sys
 import os
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QTextEdit, QPushButton, QMessageBox
 
 
-def rename_and_print_directory_structure(path, indent=3):
-    # Получаем список всех элементов в директории
-    items = os.listdir(path)
+class DirectoryCleaner(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
 
-    for item in items:
-        # Полный путь к элементу
-        full_path = os.path.join(path, item)
+    def initUI(self):
+        self.setWindowTitle('Очистка папки')
 
-        # Пропускаем системные файлы MacOS
-        if item.startswith('.DS_Store'):
-            continue
+        # Создаем вертикальный layout
+        layout = QVBoxLayout()
 
-        # Удаляем файлы по указанным шаблонам
-        if (item.startswith('[DMC.RIP]') and item.endswith('.url')) or (item.startswith('[WWW.SW.BAND]') and (item.endswith('.url') or item.endswith('.docx'))):
-            os.remove(full_path)
-            continue
+        # Поле для ввода пути к папке
+        self.path_input = QLineEdit(self)
+        self.path_input.setPlaceholderText('Введите путь к папке...')
+        layout.addWidget(self.path_input)
 
-        # Проверяем, начинается ли название с '[SW.BAND]'
-        if item.startswith('[SW.BAND]'):
-            # Создаем новое имя, убирая '[SW.BAND]' в начале
-            new_name = item.replace('[SW.BAND]', '').strip()
-            new_full_path = os.path.join(path, new_name)
+        # Окно для вывода структуры папки
+        self.output_area = QTextEdit(self)
+        self.output_area.setReadOnly(True)
+        layout.addWidget(self.output_area)
 
-            # Переименовываем элемент
-            os.rename(full_path, new_full_path)
-            # print(' ' * indent + f"Переименовано: {new_name}")
-            item = new_name  # Обновляем имя для дальнейшего использования
+        # Кнопка "Очистить"
+        self.clear_button = QPushButton('Очистить', self)
+        self.clear_button.clicked.connect(self.clear_directory)
+        layout.addWidget(self.clear_button)
 
-        # Определяем, является ли элемент папкой или файлом и добавляем соответствующий эмодзи
-        if os.path.isdir(full_path):
-            print(' ' * indent + f"🗂 {item}")
-            # Если это папка, рекурсивно выводим её содержимое
-            rename_and_print_directory_structure(full_path, indent + 4)
+        self.setLayout(layout)
+
+    def clear_directory(self):
+        path = self.path_input.text()
+        if os.path.isdir(path):
+            self.output_area.clear()
+            self.rename_and_print_directory_structure(path)
+            QMessageBox.information(self, 'Успех', 'Папка очищена!')
         else:
-            print(' ' * indent + f"📁 {item}")
+            QMessageBox.warning(self, 'Ошибка', 'Указанный путь не является папкой.')
+
+    def rename_and_print_directory_structure(self, path, indent=0):
+        items = os.listdir(path)
+        for item in items:
+            full_path = os.path.join(path, item)
+
+            if item.startswith('.DS_Store'):
+                continue
+
+            # Удаление файлов по указанным шаблонам
+            if (item.startswith('[DMC.RIP]') and item.endswith('.url')) or (
+                    item.startswith('[WWW.SW.BAND]') and (item.endswith('.url') or item.endswith('.docx'))):
+                os.remove(full_path)
+                continue
+
+            # Переименование файлов, начинающихся на '[SW.BAND]'
+            if item.startswith('[SW.BAND]'):
+                new_name = item.replace('[SW.BAND]', '').strip()
+                new_full_path = os.path.join(path, new_name)
+                os.rename(full_path, new_full_path)
+                item = new_name
+
+            # Вывод структуры папки
+            self.output_area.append(' ' * indent + f"📁 {item}")
+
+            # Если элемент является папкой, рекурсивно обрабатываем её содержимое
+            if os.path.isdir(full_path):
+                self.rename_and_print_directory_structure(full_path, indent + 4)
 
 
-# Получаем путь к текущему скрипту
-current_directory = os.path.dirname(os.path.abspath(__file__))
-
-# Ищем папку в текущей директории
-folder = next((item for item in os.listdir(current_directory) if os.path.isdir(os.path.join(current_directory, item))),
-              None)
-
-# Если папка найдена, выводим её структуру и переименовываем файлы и папки
-if folder:
-    print(f"Структура папки: n{folder}")
-    rename_and_print_directory_structure(os.path.join(current_directory, folder))
-else:
-    print("Папка не найдена.")
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = DirectoryCleaner()
+    ex.resize(600, 400)
+    ex.show()
+    sys.exit(app.exec_())
